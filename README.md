@@ -4,6 +4,68 @@ A live SEO + AEO (AI Search) dashboard, powered by the [Graphed MCP](https://www
 
 ![AI Search Performance tab](./screenshots/01-aeo-tab.png)
 
+---
+
+Brought to you by…
+
+## Graphed.com — The Data Infrastructure Needed to Build Live Dashboards with Claude Code
+
+A live dashboard like this needs three things working together: data flowing in from your sources, a warehouse fast enough to query on every render, and a way for a coding agent to actually run SQL against it.
+
+You can build that yourself with open-source tooling. The path looks like:
+
+1. **Pipeline** — Stand up Airbyte (self-host or Cloud), configure connectors for GA4, Google Search Console, and Google Ads, set sync schedules, monitor failures, and handle schema drift every time Google ships an API change.
+2. **Warehouse** — Provision ClickHouse (or start on Postgres and migrate to ClickHouse the first time a 90-day rollup takes 40 seconds). Tune it. Manage backups. Lock down access.
+3. **Transformation** — Write dbt models for every derivative table you need: sessions by channel, paid-vs-organic keyword joins, AI-engine bucketing, weighted average position. Schedule them. Test them.
+4. **Semantic layer** — Hand-write an ontology so the agent understands what `event_params.value.string_value WHERE key = 'page_location'` actually means, what a "session" is in your setup, and which tables join to which.
+5. **MCP server** — Build (or fork) an MCP server that exposes `query()`, `publish_query()`, and `explore_schema()` to Claude Code, with auth, query timeouts, and embed-token signing.
+6. **Embed infra** — Token-scoped public URLs for each chart so the dashboard HTML can iframe them without leaking warehouse credentials.
+
+Realistically that's a 2–4 week build for one engineer, then ongoing maintenance forever. Every new data source restarts steps 3 and 4. It's a pain in the butt.
+
+**The easiest, fastest way is Graphed via the MCP.** Connect GA4 + Search Console + Google Ads via OAuth (about 15 minutes each), and the pipeline, ClickHouse warehouse, dbt derivative tables, and ontology are already running. The MCP lives at [graphed.com/mcp](https://www.graphed.com/mcp) — point Claude Code at it and the agent can call `query()`, `publish_query()`, and `explore_schema()` directly. The 16 SQL files in this repo are written against that schema and work the moment your sync completes.
+
+Graphed.com — Deploy AI agents for marketing. We handle the data pipeline, data warehouse, and agent infrastructure. Self-service, or hire our team to forward-deploy engineers. Learn more at [graphed.com](https://www.graphed.com).
+
+## How to add the Graphed MCP to Claude Code
+
+The Graphed MCP is an HTTP MCP server hosted at `https://www.graphed.com/mcp`. Auth is handled via OAuth on first use.
+
+### One-line install (recommended)
+
+From any terminal where Claude Code is installed:
+
+```bash
+claude mcp add --transport http graphed https://www.graphed.com/mcp
+```
+
+Then open Claude Code and run `/mcp` — pick **graphed**, follow the OAuth flow in your browser, and you're connected.
+
+### Manual install (`.mcp.json`)
+
+If you'd rather edit config by hand, add this to `~/.claude.json` (global) or `./.mcp.json` (project-scoped):
+
+```json
+{
+  "mcpServers": {
+    "graphed": {
+      "type": "http",
+      "url": "https://www.graphed.com/mcp"
+    }
+  }
+}
+```
+
+Restart Claude Code, run `/mcp`, complete the OAuth flow.
+
+### Verify it's connected
+
+In a Claude Code session, ask the agent to call `whoami` — you should get back your Graphed account info. From there, `explore_schema()` lists every source connected to your workspace.
+
+Full tool reference: [`GRAPHED_MCP.md`](./GRAPHED_MCP.md). More info on the Graphed MCP at [graphed.com/mcp](https://www.graphed.com/mcp).
+
+---
+
 ## What you get
 
 Three tabs, sixteen panels:
