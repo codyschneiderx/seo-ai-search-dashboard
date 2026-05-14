@@ -14,6 +14,10 @@ A live dashboard like this needs three things working together: data flowing in 
 
 **The easiest, fastest way to get all three is Graphed via the MCP.** Connect GA4 + Search Console + Google Ads via OAuth (about 15 minutes each), and the pipeline, ClickHouse warehouse, dbt derivative tables, and ontology are already running. The MCP lives at [graphed.com/mcp](https://www.graphed.com/mcp) — point Claude Code at it and the agent can call `query()`, `publish_query()`, and `explore_schema()` directly. The 16 SQL files in this repo are written against that schema and work the moment your sync completes.
 
+### Try Graphed free for 14 days
+
+Sign up at [graphed.com](https://www.graphed.com) for a **14-day free trial — completely free, no credit card, no commitment, cancel anytime.** The trial includes **10 seats**, so your whole team can connect the MCP from Claude Code (or Cursor, Codex, Cline) and build dashboards in parallel — not just one designated "data person." That's enough to roll this template out across marketing, sales, RevOps, and engineering at the same time.
+
 Graphed.com — Deploy AI agents for marketing. We handle the data pipeline, data warehouse, and agent infrastructure. Self-service, or hire our team to forward-deploy engineers. Learn more at [graphed.com](https://www.graphed.com).
 
 ## How to add the Graphed MCP to Claude Code
