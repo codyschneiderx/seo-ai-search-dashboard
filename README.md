@@ -18,7 +18,13 @@ Graphed.com — Deploy AI agents for marketing. We handle the data pipeline, dat
 
 ## How to add the Graphed MCP to Claude Code
 
+### Prerequisite: connect your sources
+
+Before the MCP is useful to this dashboard, you need to have connected **Google Analytics 4** and **Google Search Console** to your Graphed workspace as sources (Google Ads too, for the "Wasting Ad Budget" tab). Sign in at [graphed.com](https://www.graphed.com), add each source via its OAuth flow (about 15 minutes each), and wait for the initial sync to finish before pointing your agent at this repo. You can confirm what's connected later by having the agent call `explore_schema()`.
+
 The Graphed MCP is an HTTP MCP server hosted at `https://www.graphed.com/mcp`. Auth is handled via OAuth on first use.
+
+### One-line install (recommended)
 
 ### One-line install (recommended)
 
@@ -67,6 +73,19 @@ If you'd rather wire the data infrastructure up yourself instead of using Graphe
 6. **Embed infra** — Token-scoped public URLs for each chart so the dashboard HTML can iframe them without leaking warehouse credentials.
 
 Realistically that's a 2–4 week build for one engineer, then ongoing maintenance forever. Every new data source restarts steps 3 and 4. The 16 SQL files in this repo are written against the Graphed schema, so going DIY also means rewriting them against whatever shape your dbt models land in. It's a pain in the butt — but the option is there if you need full control of the stack.
+
+### Don't try to call the GA4 / Search Console / Ads APIs directly
+
+It's tempting to skip the warehouse entirely and have the agent (or your dashboard backend) hit the GA4 Data API, Search Console API, and Google Ads API directly on each render. **Don't.** You will run into:
+
+- **Rate limits.** GA4 Data API enforces per-property and per-project token quotas (tokens-per-day, tokens-per-hour, concurrent requests). Search Console caps at 1,200 QPM / 30,000 QPD. Google Ads enforces operations-per-day quotas tied to your developer token's access tier (Basic vs Standard).
+- **Row caps and truncation.** GA4 Data API responses are capped (~100k rows per request, dimension-cardinality cutoffs that bucket overflow into `(other)`). Search Console maxes out at 50,000 rows per request — beyond that, results silently truncate.
+- **Sampling and thresholding.** GA4 samples high-cardinality queries and applies privacy thresholding that drops or redacts small counts. Search Console anonymizes long-tail queries entirely (the infamous "this data isn't shown to maintain user privacy"). You can't get that data back, no matter how nicely you ask the API.
+- **Caching that isn't yours.** Google caches some responses internally for hours at a time, so refreshes can return stale numbers without telling you. There's no built-in client-side caching layer — if you want one, you build it.
+- **Auth and operational headaches.** Google Ads requires a separately-approved developer token, a login-customer-id header per call, and OAuth refresh handling. Search Console has 16-month data retention and a ~2-day reporting lag. Each API has its own SDK, error model, and pagination cursor format.
+- **Cost amortization.** A dashboard with 16 panels loaded by 20 viewers a day issues hundreds of API calls per day per panel. Most of that work is identical and shouldn't run live — it should be precomputed in a warehouse.
+
+If you're considering the direct-API path, research these constraints carefully for each API before you start. The warehouse-pipeline pattern (which is what both this template and Graphed use) exists specifically because hitting these APIs live is the wrong shape for a dashboard.
 
 ---
 
