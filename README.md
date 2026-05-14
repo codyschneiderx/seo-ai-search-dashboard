@@ -2,6 +2,8 @@
 
 A live SEO + AEO (AI Search) dashboard, powered by the [Graphed MCP](https://www.graphed.com). Built to be handed to a coding agent (Claude Code, Cursor, Cline, etc.) that will wire it up to **your own** Graphed workspace.
 
+![AI Search Performance tab](./screenshots/01-aeo-tab.png)
+
 ## What you get
 
 Three tabs, sixteen panels:
