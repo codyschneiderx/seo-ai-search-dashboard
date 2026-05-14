@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Reach — SEO & AI Search Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #07090d;
+    --panel: #0d1117;
+    --panel-2: #11161e;
+    --panel-3: #161c27;
+    --border: #1c2230;
+    --text: #e5e9f0;
+    --text-dim: #8b94a3;
+    --text-dimmer: #5a6373;
+    --teal: #22d3ee;
+    --teal-soft: rgba(34, 211, 238, 0.18);
+    --gold: #fbbf24;
+    --green: #34d399;
+    --green-soft: rgba(52, 211, 153, 0.16);
+    --red: #f87171;
+    --red-soft: rgba(248, 113, 113, 0.16);
+    --purple: #a78bfa;
+    --orange: #fb923c;
+
+    --chatgpt: #10a37f;
+    --gemini: #8e75f6;
+    --perplexity: #20808d;
+    --claude: #cc785c;
+    --google: #fbbf24;
+    --bing: #00a4ef;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", sans-serif;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0);
+    background-size: 22px 22px;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 24px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .logo {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-weight: 600; letter-spacing: -0.01em;
+  }
+  .logo .dot { width: 8px; height: 8px; border-radius: 2px; background: var(--teal); }
+  h1.title { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .header .spacer { flex: 1; }
+  .date-controls {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 10px;
+  }
+  .date-controls label { color: var(--text-dim); font-size: 12px; }
+  .date-controls input {
+    background: transparent; color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 4px 6px; font: inherit; color-scheme: dark;
+  }
+  .apply-btn {
+    background: var(--teal); color: #07090d; border: 0;
+    border-radius: 6px; padding: 6px 12px;
+    font-weight: 600; font-size: 12px; cursor: pointer;
+  }
+  .live-tag {
+    color: var(--green); font-size: 11px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .pulse {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 6px;
+    padding: 14px 24px 0; max-width: 1480px; margin: 0 auto;
+  }
+  .tab-btn {
+    background: var(--panel); border: 1px solid var(--border); border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    color: var(--text-dim);
+    padding: 10px 18px; cursor: pointer; font: inherit; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .tab-btn .badge {
+    background: var(--teal-soft); color: var(--teal);
+    border-radius: 3px; padding: 1px 6px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+  }
+  .tab-btn.active {
+    color: var(--text); background: var(--panel-2);
+    border-color: var(--teal);
+    box-shadow: 0 0 0 1px var(--teal-soft) inset;
+  }
+
+  main { max-width: 1480px; margin: 0 auto; padding: 0 24px 40px; }
+  .tab { display: none; }
+  .tab.active { display: block; }
+
+  .grid { display: grid; gap: 14px; margin-top: 14px; }
+  .grid.cols-12 { grid-template-columns: repeat(12, 1fr); }
+
+  /* Cards */
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .card h3 {
+    margin: 0 0 10px;
+    font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card h3 .sub {
+    color: var(--text-dim); font-weight: 400; font-size: 12px;
+  }
+
+  /* Hero callout - section banner */
+  .hero {
+    background: linear-gradient(135deg, var(--panel-2) 0%, var(--panel-3) 100%);
+    border: 1px solid var(--teal-soft);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-top: 14px;
+    display: flex; align-items: center; gap: 24px;
+  }
+  .hero.green { border-color: var(--green-soft); }
+  .hero.red   { border-color: var(--red-soft); }
+  .hero .hero-eyebrow {
+    color: var(--teal); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .hero.green .hero-eyebrow { color: var(--green); }
+  .hero.red   .hero-eyebrow { color: var(--red); }
+  .hero .hero-title {
+    font-size: 22px; font-weight: 600; letter-spacing: -0.015em;
+  }
+  .hero .hero-title .accent { color: var(--teal); }
+  .hero.green .hero-title .accent { color: var(--green); }
+  .hero.red   .hero-title .accent { color: var(--red); }
+  .hero .hero-sub {
+    color: var(--text-dim); margin-top: 4px;
+  }
+  .hero .hero-right { margin-left: auto; }
+
+  /* KPI */
+  .kpi { gap: 4px; }
+  .kpi-row {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
+  }
+  .kpi-icon {
+    width: 22px; height: 22px; border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--teal-soft); color: var(--teal);
+    font-weight: 700; font-size: 12px;
+  }
+  .kpi-label {
+    color: var(--text-dim); font-size: 11px; margin-bottom: 2px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .kpi-value {
+    font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-value.small { font-size: 20px; }
+  .kpi-value.xsmall { font-size: 16px; }
+  .kpi-delta { font-size: 11px; font-weight: 600; }
+  .kpi-delta.up   { color: var(--green); }
+  .kpi-delta.down { color: var(--red); }
+  .kpi .spark { height: 36px; margin-top: 4px; }
+
+  /* Charts */
+  .chart-wrap { position: relative; flex: 1; min-height: 180px; }
+  .chart-wrap.h-220 { min-height: 220px; }
+  .chart-wrap.h-260 { min-height: 260px; }
+  .chart-wrap.h-300 { min-height: 300px; }
+  .chart-wrap.h-360 { min-height: 360px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    text-align: left; color: var(--text-dim);
+    font-weight: 500; padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--panel);
+  }
+  tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(28, 34, 48, 0.5);
+    vertical-align: middle;
+  }
+  tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.path { color: var(--text); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td.path:hover { white-space: normal; word-break: break-all; }
+  .table-scroll { overflow: auto; max-height: 420px; }
+  .table-scroll.h-340 { max-height: 340px; }
+  .table-scroll.h-500 { max-height: 500px; }
+
+  .bar-row { display: flex; align-items: center; gap: 8px; }
+  .bar {
+    flex: 1; height: 16px; border-radius: 3px;
+    background: var(--teal); box-shadow: 0 0 0 1px rgba(34,211,238,0.2);
+  }
+  .bar.green { background: var(--green); box-shadow: 0 0 0 1px rgba(52,211,153,0.2); }
+  .bar.red   { background: var(--red);   box-shadow: 0 0 0 1px rgba(248,113,113,0.2); }
+  .pill {
+    display: inline-block;
+    padding: 1px 6px; border-radius: 3px;
+    font-size: 10px; font-weight: 600;
+    background: var(--panel-3); color: var(--text-dim);
+  }
+  .pill.green { background: var(--green-soft); color: var(--green); }
+  .pill.red   { background: var(--red-soft);   color: var(--red); }
+  .pill.gold  { background: rgba(251,191,36,0.18); color: var(--gold); }
+
+  .ai-mix-row {
+    display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    border-bottom: 1px solid rgba(28,34,48,0.5);
+  }
+  .ai-mix-row:last-child { border-bottom: 0; }
+  .ai-mix-chip {
+    width: 56px; text-align: center; font-size: 10px; font-weight: 700;
+    padding: 3px 0; border-radius: 4px; color: #07090d;
+  }
+  .ai-mix-bar { flex: 1; height: 8px; border-radius: 2px; background: var(--panel-3); position: relative; overflow: hidden; }
+  .ai-mix-fill { position: absolute; left: 0; top: 0; bottom: 0; }
+  .ai-mix-val { min-width: 80px; text-align: right; font-variant-numeric: tabular-nums; }
+
+  .loading { color: var(--text-dim); font-style: italic; }
+  .empty   { color: var(--text-dim); padding: 14px; text-align: center; }
+
+  /* Engine logos */
+  .engine-chip {
+    background: var(--panel-3); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 6px;
+    font-size: 10px; font-weight: 600;
+  }
+
+  /* Country bar (no map for simplicity) */
+  .country-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+  .country-row .name { min-width: 130px; font-size: 12px; color: var(--text); }
+  .country-row .bar-col { flex: 1; }
+  .country-row .val { min-width: 70px; text-align: right; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo"><span class="dot"></span>Reach</div>
+  <h1 class="title">SEO & AI Search Dashboard</h1>
+  <span class="live-tag"><span class="pulse"></span> Live · powered by Graphed</span>
+  <div class="spacer"></div>
+  <div class="date-controls">
+    <label>From</label>
+    <input type="date" id="startDate" value="2026-02-13" />
+    <label>To</label>
+    <input type="date" id="endDate" value="2026-05-13" />
+    <button class="apply-btn" id="applyBtn">Apply</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="aeo">AI Search Performance <span class="badge">AEO</span></button>
+  <button class="tab-btn" data-tab="budget">Where You're Wasting Ad Budget</button>
+  <button class="tab-btn" data-tab="organic">Organic Overview</button>
+</nav>
+
+<main>
+
+  <!-- ===================== TAB 1: AEO ===================== -->
+  <section class="tab active" id="tab-aeo">
+
+    <div class="hero" id="aeoHero">
+      <div>
+        <div class="hero-eyebrow">AI Search · this period</div>
+        <div class="hero-title">
+          AI engines sent you <span class="accent" id="hero-ai-sessions">—</span> sessions —
+          <span class="accent" id="hero-ai-share">—</span> of your organic search traffic.
+        </div>
+        <div class="hero-sub" id="hero-ai-sub">ChatGPT, Perplexity, Gemini, and Claude referrals from GA4 — most teams have no idea this exists.</div>
+      </div>
+      <div class="hero-right">
+        <span class="engine-chip" style="color:#10a37f;">ChatGPT</span>
+        <span class="engine-chip" style="color:#8e75f6;">Gemini</span>
+        <span class="engine-chip" style="color:#22d3ee;">Perplexity</span>
+        <span class="engine-chip" style="color:#cc785c;">Claude</span>
+      </div>
+    </div>
+
+    <div class="grid cols-12">
+      <!-- AEO KPI cards with sparklines -->
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label"><span class="kpi-icon" style="background:rgba(16,163,127,0.18);color:#10a37f;">A</span> AI Sessions</div>
+        <div class="kpi-row">
+          <div class="kpi-value" id="kpi-ai-sessions">—</div>
+          <div class="kpi-delta" id="kpi-ai-sessions-delta">&nbsp;</div>
+        </div>
+        <div class="spark"><canvas id="spark-ai-sessions"></canvas></div>
+      </div>
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label"><span class="kpi-icon">%</span> AI Share of Organic</div>
+        <div class="kpi-row">
+          <div class="kpi-value" id="kpi-ai-share">—</div>
+          <div class="kpi-delta" id="kpi-ai-share-delta">&nbsp;</div>
+        </div>
+        <div class="spark"><canvas id="spark-ai-share"></canvas></div>
+      </div>
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label"><span class="kpi-icon">▣</span> AI Engagement Rate</div>
+        <div class="kpi-row">
+          <div class="kpi-value" id="kpi-ai-engage">—</div>
+        </div>
+        <div class="spark"><canvas id="spark-ai-engage"></canvas></div>
+      </div>
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label"><span class="kpi-icon" style="background:rgba(251,191,36,0.18);color:#fbbf24;">G</span> Traditional Sessions</div>
+        <div class="kpi-row">
+          <div class="kpi-value" id="kpi-trad-sessions">—</div>
+          <div class="kpi-delta" id="kpi-trad-sessions-delta">&nbsp;</div>
+        </div>
+        <div class="spark"><canvas id="spark-trad-sessions"></canvas></div>
+      </div>
+
+      <!-- Big chart: AI vs Traditional over time -->
+      <div class="card" style="grid-column: span 12;">
+        <h3>AI vs Traditional Search Sessions <span class="sub">— daily, current period</span></h3>
+        <div class="chart-wrap h-300"><canvas id="aiVsTradTs"></canvas></div>
+      </div>
+
+      <!-- AI engine mix + sources over time -->
+      <div class="card" style="grid-column: span 4;">
+        <h3>AI Engine Mix <span class="sub">— who's sending you traffic?</span></h3>
+        <div class="chart-wrap h-220"><canvas id="aiEngineDonut"></canvas></div>
+        <div id="aiEngineList" style="margin-top: 10px;"></div>
+      </div>
+      <div class="card" style="grid-column: span 8;">
+        <h3>Sources Sessions Breakdown Evolution</h3>
+        <div class="chart-wrap h-260"><canvas id="sourcesTs"></canvas></div>
+      </div>
+
+      <!-- Top AI-cited pages -->
+      <div class="card" style="grid-column: span 12;">
+        <h3>Top AI-Cited Pages <span class="sub">— landing pages that ChatGPT / Perplexity / Gemini / Claude are linking to</span></h3>
+        <div class="table-scroll h-500">
+          <table id="aiPagesTable">
+            <thead><tr>
+              <th>Landing page</th>
+              <th class="num">AI Sessions</th>
+              <th class="num">Engagement Rate</th>
+              <th class="num">Share of AI traffic</th>
+            </tr></thead>
+            <tbody><tr><td colspan="4" class="loading">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GSC strip -->
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label">GSC Impressions</div>
+        <div class="kpi-value" id="gsc-imp">—</div>
+        <div class="spark"><canvas id="spark-gsc-imp"></canvas></div>
+      </div>
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label">GSC Clicks</div>
+        <div class="kpi-value" id="gsc-clicks">—</div>
+        <div class="spark"><canvas id="spark-gsc-clicks"></canvas></div>
+      </div>
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label">Ranking Keywords</div>
+        <div class="kpi-value" id="gsc-kw">—</div>
+      </div>
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label">Avg CTR</div>
+        <div class="kpi-value" id="gsc-ctr">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TAB 2: WASTING AD BUDGET ===================== -->
+  <section class="tab" id="tab-budget">
+    <div class="hero green">
+      <div>
+        <div class="hero-eyebrow">Save Budget · this period</div>
+        <div class="hero-title">
+          You're spending <span class="accent" id="hero-total-spend">—</span> on Google Ads — and at least
+          <span class="accent" id="hero-waste-spend">—</span> overlaps with keywords you already rank top 10 for organically.
+        </div>
+        <div class="hero-sub">Pause those ads. The organic clicks were already coming. Re-allocate the budget to queries where you don't rank.</div>
+      </div>
+    </div>
+
+    <div class="grid cols-12">
+      <div class="card" style="grid-column: span 7;">
+        <h3 style="color: var(--green);">✓ Where You're Wasting Ad Budget</h3>
+        <div class="kpi-label" style="margin-bottom:8px;">Paid search terms where organic position ≤ 10. Lower position = stronger case to pause.</div>
+        <div class="table-scroll h-500">
+          <table id="saveMoneyTable">
+            <thead><tr>
+              <th>Paid Search Term</th>
+              <th class="num">Organic Position</th>
+              <th class="num">Ad Spend</th>
+              <th class="num">Paid Clicks</th>
+              <th class="num">Organic Clicks</th>
+            </tr></thead>
+            <tbody><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column: span 5;">
+        <h3 style="color: var(--red);">♥ Where You Should Invest</h3>
+        <div class="kpi-label" style="margin-bottom:8px;">High-impression queries where you rank 10–30. Real ad opportunity.</div>
+        <div class="table-scroll h-500">
+          <table id="investTable">
+            <thead><tr>
+              <th>Query</th>
+              <th class="num">Avg Pos</th>
+              <th class="num">Impressions</th>
+            </tr></thead>
+            <tbody><tr><td colspan="3" class="loading">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column: span 12;">
+        <h3>Average Position Evolution <span class="sub">— weighted by impressions, lower is better</span></h3>
+        <div class="chart-wrap h-300"><canvas id="avgPosTs"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TAB 3: ORGANIC OVERVIEW ===================== -->
+  <section class="tab" id="tab-organic">
+
+    <div class="grid cols-12">
+      <!-- KPIs -->
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label"><span class="kpi-icon">↗</span> Total Organic Sessions</div>
+        <div class="kpi-value" id="kpi-sessions">—</div>
+        <div class="kpi-delta" id="kpi-sessions-delta">&nbsp;</div>
+      </div>
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label"><span class="kpi-icon">▣</span> Organic Engaged Sessions</div>
+        <div class="kpi-value" id="kpi-engaged">—</div>
+        <div class="kpi-delta" id="kpi-engaged-delta">&nbsp;</div>
+      </div>
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label"><span class="kpi-icon">★</span> Organic Key Events</div>
+        <div class="kpi-value" id="kpi-key">—</div>
+        <div class="kpi-delta" id="kpi-key-delta">&nbsp;</div>
+      </div>
+      <div class="card kpi" style="grid-column: span 3;">
+        <div class="kpi-label"><span class="kpi-icon">👤</span> Total Organic Users</div>
+        <div class="kpi-value" id="kpi-users">—</div>
+        <div class="kpi-delta" id="kpi-users-delta">&nbsp;</div>
+      </div>
+
+      <div class="card" style="grid-column: span 6;">
+        <h3>Organic Sessions Over Time <span class="sub">— current vs previous</span></h3>
+        <div class="chart-wrap h-260"><canvas id="sessionsTs"></canvas></div>
+      </div>
+      <div class="card" style="grid-column: span 6;">
+        <h3>Organic Key Events Over Time <span class="sub">— current vs previous</span></h3>
+        <div class="chart-wrap h-260"><canvas id="keyEventsTs"></canvas></div>
+      </div>
+
+      <div class="card" style="grid-column: span 8;">
+        <h3>Sessions by Country <span class="sub">(top 20)</span></h3>
+        <div id="countryList" style="margin-top: 4px;"><div class="loading">Loading…</div></div>
+      </div>
+
+      <div class="card" style="grid-column: span 4;">
+        <h3>Day of Week</h3>
+        <div class="chart-wrap h-220"><canvas id="dowBar"></canvas></div>
+      </div>
+
+      <div class="card" style="grid-column: span 4;">
+        <h3>Device</h3>
+        <div class="chart-wrap h-220"><canvas id="deviceDonut"></canvas></div>
+      </div>
+      <div class="card" style="grid-column: span 4;">
+        <h3>Browser</h3>
+        <div class="chart-wrap h-220"><canvas id="browserDonut"></canvas></div>
+      </div>
+      <div class="card" style="grid-column: span 4;">
+        <h3>Operating System</h3>
+        <div class="chart-wrap h-220"><canvas id="osDonut"></canvas></div>
+      </div>
+
+      <div class="card" style="grid-column: span 12;">
+        <h3>Most Visited Pages <span class="sub">— sessions, engaged, users, bounce rate</span></h3>
+        <div class="table-scroll h-500">
+          <table id="pageEngagementTable">
+            <thead><tr>
+              <th>Page</th>
+              <th class="num">Sessions</th>
+              <th class="num">Engaged sessions</th>
+              <th class="num">Total users</th>
+              <th class="num">Bounce rate</th>
+            </tr></thead>
+            <tbody><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  Chart.defaults.color = '#8b94a3';
+  Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, Inter, sans-serif';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+
+  const C = {
+    teal: '#22d3ee', tealLine: 'rgba(34,211,238,1)', tealFill: 'rgba(34,211,238,0.18)',
+    gold: '#fbbf24', goldLine: 'rgba(251,191,36,1)', goldFill: 'rgba(251,191,36,0.12)',
+    green: '#34d399', red: '#f87171', purple: '#a78bfa', orange: '#fb923c',
+    grey: 'rgba(180,180,180,0.5)',
+    chatgpt: '#10a37f', gemini: '#8e75f6', perplexity: '#22d3ee', claude: '#cc785c',
+  };
+
+  const AI_SOURCES = ['chatgpt.com', 'perplexity.ai', 'perplexity', 'gemini.google.com', 'claude.ai'];
+  const SOURCE_COLOR = {
+    'google': '#fbbf24', 'bing': '#00a4ef', 'yahoo': '#c084fc',
+    'duckduckgo': '#fb923c',
+    'chatgpt.com': '#10a37f', 'perplexity.ai': '#22d3ee',
+    'gemini.google.com': '#8e75f6', 'claude.ai': '#cc785c',
+  };
+
+  const fmt = (n) => {
+    if (n == null || isNaN(n)) return '—';
+    n = Number(n);
+    if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
+    if (Math.abs(n) >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
+    return n.toLocaleString();
+  };
+  const fmtPct = (n, d=1) => n == null ? '—' : (Number(n) * 100).toFixed(d) + '%';
+  const fmtFixed = (n, d=1) => n == null ? '—' : Number(n).toFixed(d);
+  const fmtUsd = (n) => n == null ? '—' : '$' + Number(n).toFixed(2);
+  const escape = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+  function delta(curr, prev) {
+    if (!prev || prev === 0) return null;
+    return (curr - prev) / prev;
+  }
+  function setDelta(el, d) {
+    if (d == null) { el.textContent = ''; return; }
+    const pct = Math.abs(d * 100).toFixed(1) + '%';
+    el.textContent = (d >= 0 ? '▲ +' : '▼ ') + pct;
+    el.className = 'kpi-delta ' + (d >= 0 ? 'up' : 'down');
+  }
+
+  let params = { start_date: '2026-02-13', end_date: '2026-05-13' };
+  let charts = {};
+  const destroy = (k) => { if (charts[k]) { charts[k].destroy(); delete charts[k]; } };
+
+  async function fetchData(key) {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`/api/data/${key}?${qs}`);
+    if (!res.ok) throw new Error(`Failed to fetch ${key}`);
+    return res.json();
+  }
+  const rowsOf = (d) => Array.isArray(d) ? d : (d.data || []);
+
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    });
+  });
+
+  // ============== Chart helpers ==============
+  function lineOpts({ legend = false } = {}) {
+    return {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: legend, position: 'top', labels: { boxWidth: 10, padding: 10 } },
+        tooltip: { backgroundColor: '#11161e', borderColor: '#1c2230', borderWidth: 1 },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 18 } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => fmt(v) } },
+      }
+    };
+  }
+  function sparkOpts(color) {
+    return {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false } },
+      elements: { line: { borderWidth: 1.6, borderColor: color, tension: 0.35 }, point: { radius: 0 } }
+    };
+  }
+  function renderSparkline(canvasId, data, color, fillColor) {
+    destroy(canvasId);
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+      type: 'line',
+      data: { labels: data.map((_, i) => i), datasets: [{ data, borderColor: color, backgroundColor: fillColor || 'transparent', fill: !!fillColor }] },
+      options: sparkOpts(color)
+    });
+  }
+  function donut(canvasId, labels, data, colors, opts={}) {
+    destroy(canvasId);
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: opts.cutout || '60%',
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 6, font: { size: 10 } } } }
+      }
+    });
+  }
+
+  // ============== AEO Tab renderers ==============
+
+  async function renderAeo() {
+    const ts = rowsOf(await fetchData('aiVsTradTimeseries'));
+    const curr = ts.filter(r => r.period === 'current');
+    const prev = ts.filter(r => r.period === 'previous');
+
+    // Aggregate
+    const sumBy = (rows, bucket, key) => rows.filter(r => r.bucket === bucket).reduce((s, r) => s + Number(r[key] || 0), 0);
+    const aiCurr = sumBy(curr, 'AI', 'sessions');
+    const aiPrev = sumBy(prev, 'AI', 'sessions');
+    const tradCurr = sumBy(curr, 'Traditional', 'sessions');
+    const tradPrev = sumBy(prev, 'Traditional', 'sessions');
+    const aiEng = sumBy(curr, 'AI', 'engaged_sessions');
+    const aiEngRate = aiCurr ? aiEng / aiCurr : null;
+    const aiShare = (aiCurr + tradCurr) ? aiCurr / (aiCurr + tradCurr) : null;
+    const aiSharePrev = (aiPrev + tradPrev) ? aiPrev / (aiPrev + tradPrev) : null;
+
+    // Hero
+    document.getElementById('hero-ai-sessions').textContent = fmt(aiCurr);
+    document.getElementById('hero-ai-share').textContent = fmtPct(aiShare);
+    const aiGrowth = delta(aiCurr, aiPrev);
+    document.getElementById('hero-ai-sub').textContent =
+      aiGrowth != null
+        ? `AI traffic ${aiGrowth >= 0 ? 'grew' : 'fell'} ${Math.abs(aiGrowth*100).toFixed(1)}% vs the prior ${curr.length ? Math.round(curr.length / new Set(curr.map(r=>r.date)).size * (new Set(curr.map(r=>r.date)).size)) : 0} days. Most teams have no idea this exists in their GA4.`
+        : 'ChatGPT, Perplexity, Gemini, and Claude referrals from GA4 — most teams have no idea this exists.';
+
+    // KPI numbers
+    document.getElementById('kpi-ai-sessions').textContent = fmt(aiCurr);
+    setDelta(document.getElementById('kpi-ai-sessions-delta'), delta(aiCurr, aiPrev));
+    document.getElementById('kpi-ai-share').textContent = fmtPct(aiShare);
+    setDelta(document.getElementById('kpi-ai-share-delta'), delta(aiShare, aiSharePrev));
+    document.getElementById('kpi-ai-engage').textContent = fmtPct(aiEngRate);
+    document.getElementById('kpi-trad-sessions').textContent = fmt(tradCurr);
+    setDelta(document.getElementById('kpi-trad-sessions-delta'), delta(tradCurr, tradPrev));
+
+    // Build per-date series (current)
+    const dates = [...new Set(curr.map(r => r.date))].sort();
+    const aiByDate = Object.fromEntries(curr.filter(r => r.bucket === 'AI').map(r => [r.date, r.sessions]));
+    const tradByDate = Object.fromEntries(curr.filter(r => r.bucket === 'Traditional').map(r => [r.date, r.sessions]));
+    const aiSeries = dates.map(d => aiByDate[d] || 0);
+    const tradSeries = dates.map(d => tradByDate[d] || 0);
+
+    // Sparklines
+    renderSparkline('spark-ai-sessions', aiSeries, C.chatgpt, 'rgba(16,163,127,0.18)');
+    renderSparkline('spark-trad-sessions', tradSeries, C.gold, C.goldFill);
+    renderSparkline('spark-ai-share', dates.map(d => {
+      const a = aiByDate[d] || 0; const t = tradByDate[d] || 0;
+      return (a + t) ? a / (a + t) : 0;
+    }), C.teal, 'rgba(34,211,238,0.16)');
+    renderSparkline('spark-ai-engage', [], C.green);  // placeholder; engagement not split per day
+
+    // AI vs Traditional big chart
+    destroy('aiVsTradTs');
+    charts.aiVsTradTs = new Chart(document.getElementById('aiVsTradTs'), {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          { label: 'Traditional (Google, Bing, Yahoo, …)', data: tradSeries, borderColor: C.goldLine, backgroundColor: C.goldFill, fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+          { label: 'AI (ChatGPT, Perplexity, Gemini, Claude)', data: aiSeries, borderColor: C.chatgpt, backgroundColor: 'rgba(16,163,127,0.18)', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+        ]
+      },
+      options: lineOpts({ legend: true })
+    });
+  }
+
+  async function renderAiEngineMix() {
+    const data = rowsOf(await fetchData('sourcesBreakdown'));
+    const ai = data.filter(r => r.bucket === 'AI').sort((a,b) => b.sessions - a.sessions);
+    const total = ai.reduce((s, r) => s + r.sessions, 0);
+
+    donut('aiEngineDonut',
+      ai.map(r => r.session_source),
+      ai.map(r => r.sessions),
+      ai.map(r => SOURCE_COLOR[r.session_source] || '#8b94a3')
+    );
+
+    const list = document.getElementById('aiEngineList');
+    list.innerHTML = ai.map(r => {
+      const pct = total ? r.sessions / total : 0;
+      const color = SOURCE_COLOR[r.session_source] || '#8b94a3';
+      return `
+        <div class="ai-mix-row">
+          <span class="ai-mix-chip" style="background:${color};">${escape(r.session_source.replace('.com','').replace('.google.com','').replace('.ai',''))}</span>
+          <div class="ai-mix-bar"><div class="ai-mix-fill" style="background:${color};width:${(pct*100).toFixed(1)}%;"></div></div>
+          <div class="ai-mix-val">${fmt(r.sessions)} <span style="color:var(--text-dim);">(${(pct*100).toFixed(1)}%)</span></div>
+        </div>`;
+    }).join('') || '<div class="empty">No AI traffic in this period.</div>';
+  }
+
+  async function renderSourcesTs() {
+    const rows = rowsOf(await fetchData('sourcesTimeseries'));
+    const dates = [...new Set(rows.map(r => r.date))].sort();
+    const sources = [...new Set(rows.map(r => r.session_source))];
+    const datasets = sources.map(src => {
+      const byDate = Object.fromEntries(rows.filter(r => r.session_source === src).map(r => [r.date, r.sessions]));
+      return {
+        label: src, data: dates.map(d => byDate[d] || 0),
+        borderColor: SOURCE_COLOR[src] || '#8b94a3',
+        backgroundColor: 'transparent', tension: 0.3, pointRadius: 0, borderWidth: 1.6,
+      };
+    });
+    destroy('sourcesTs');
+    charts.sourcesTs = new Chart(document.getElementById('sourcesTs'), {
+      type: 'line', data: { labels: dates, datasets }, options: lineOpts({ legend: true })
+    });
+  }
+
+  async function renderTopAiPages() {
+    const rows = rowsOf(await fetchData('topAiPages'));
+    const total = rows.reduce((s, r) => s + Number(r.ai_sessions || 0), 0);
+    document.querySelector('#aiPagesTable tbody').innerHTML = rows.map(r => {
+      const share = total ? r.ai_sessions / total : 0;
+      return `
+        <tr>
+          <td class="path">${escape(r.landing_page)}</td>
+          <td class="num">${fmt(r.ai_sessions)}</td>
+          <td class="num">${fmtPct(r.engagement_rate)}</td>
+          <td class="bar-cell">
+            <div class="bar-row">
+              <div class="bar" style="background:${C.chatgpt}; width:${(share*100).toFixed(1)}%; max-width:200px;"></div>
+              <span class="num">${(share*100).toFixed(1)}%</span>
+            </div>
+          </td>
+        </tr>`;
+    }).join('') || '<tr><td colspan="4" class="empty">No AI traffic yet</td></tr>';
+  }
+
+  async function renderGscStrip() {
+    const totals = rowsOf(await fetchData('gscTotals'))[0] || {};
+    document.getElementById('gsc-imp').textContent    = fmt(totals.impressions);
+    document.getElementById('gsc-clicks').textContent = fmt(totals.clicks);
+    document.getElementById('gsc-kw').textContent     = fmt(totals.keywords);
+    const ctr = totals.impressions ? totals.clicks / totals.impressions : null;
+    document.getElementById('gsc-ctr').textContent = ctr == null ? '—' : (ctr * 100).toFixed(2) + '%';
+
+    const ts = rowsOf(await fetchData('avgPositionTimeseries'));
+    renderSparkline('spark-gsc-imp', ts.map(r => r.total_impressions), C.teal, C.tealFill);
+    renderSparkline('spark-gsc-clicks', ts.map(r => r.total_clicks), C.teal, C.tealFill);
+  }
+
+  // ============== Budget tab renderers ==============
+
+  async function renderSaveMoney() {
+    const rows = rowsOf(await fetchData('searchTermSaveMoney'));
+    const totalSpend = rows.reduce((s, r) => s + Number(r.ad_spend || 0), 0);
+    const wasteSpend = rows.filter(r => r.organic_position != null && r.organic_position <= 3)
+                          .reduce((s, r) => s + Number(r.ad_spend || 0), 0);
+    document.getElementById('hero-total-spend').textContent = fmtUsd(totalSpend);
+    document.getElementById('hero-waste-spend').textContent = fmtUsd(wasteSpend);
+
+    if (!rows.length) {
+      document.querySelector('#saveMoneyTable tbody').innerHTML =
+        '<tr><td colspan="5" class="empty">No paid search terms in this period match queries you also rank top 10 for organically. That\'s actually good — you\'re not double-paying.</td></tr>';
+      return;
+    }
+    const maxSpend = Math.max(...rows.map(r => r.ad_spend));
+    document.querySelector('#saveMoneyTable tbody').innerHTML = rows.map(r => {
+      const pos = r.organic_position;
+      const posPill = pos == null ? '<span class="pill">no organic data</span>'
+        : pos <= 3 ? `<span class="pill green">${fmtFixed(pos,1)} — CUT THE AD</span>`
+        : pos <= 10 ? `<span class="pill gold">${fmtFixed(pos,1)}</span>`
+        : `<span class="pill">${fmtFixed(pos,1)}</span>`;
+      return `
+        <tr>
+          <td>${escape(r.query)}</td>
+          <td class="num">${posPill}</td>
+          <td class="num">
+            <div class="bar-row">
+              <div class="bar green" style="width:${(r.ad_spend / maxSpend * 100).toFixed(1)}%; max-width:120px;"></div>
+              <span>${fmtUsd(r.ad_spend)}</span>
+            </div>
+          </td>
+          <td class="num">${fmt(r.paid_clicks)}</td>
+          <td class="num">${fmt(r.organic_clicks)}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  async function renderInvest() {
+    const rows = rowsOf(await fetchData('investInAds'));
+    if (!rows.length) {
+      document.querySelector('#investTable tbody').innerHTML = '<tr><td colspan="3" class="empty">No mid-rank opportunities.</td></tr>';
+      return;
+    }
+    const max = Math.max(...rows.map(r => r.total_impressions));
+    document.querySelector('#investTable tbody').innerHTML = rows.map(r => `
+      <tr>
+        <td>${escape(r.query)}</td>
+        <td class="num">${fmtFixed(r.avg_position, 1)}</td>
+        <td class="num">
+          <div class="bar-row">
+            <div class="bar red" style="width:${(r.total_impressions / max * 100).toFixed(1)}%; max-width:120px;"></div>
+            <span>${fmt(r.total_impressions)}</span>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function renderAvgPos() {
+    const rows = rowsOf(await fetchData('avgPositionTimeseries'));
+    destroy('avgPosTs');
+    charts.avgPosTs = new Chart(document.getElementById('avgPosTs'), {
+      type: 'line',
+      data: {
+        labels: rows.map(r => r.date),
+        datasets: [{
+          label: 'Avg position', data: rows.map(r => r.avg_position),
+          borderColor: C.tealLine, backgroundColor: C.tealFill,
+          fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: '#11161e' } },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 18 } },
+          y: { reverse: true, grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Position (lower = better)' } }
+        }
+      }
+    });
+  }
+
+  // ============== Organic Overview renderers ==============
+
+  async function renderOrganicKpis() {
+    const rows = rowsOf(await fetchData('organicKpis'));
+    const curr = rows.find(r => r.period === 'current') || {};
+    const prev = rows.find(r => r.period === 'previous') || {};
+
+    document.getElementById('kpi-sessions').textContent = fmt(curr.sessions);
+    document.getElementById('kpi-engaged').textContent  = fmt(curr.engaged_sessions);
+    document.getElementById('kpi-key').textContent      = fmt(curr.key_events);
+    document.getElementById('kpi-users').textContent    = fmt(curr.total_users);
+
+    setDelta(document.getElementById('kpi-sessions-delta'), delta(curr.sessions, prev.sessions));
+    setDelta(document.getElementById('kpi-engaged-delta'),  delta(curr.engaged_sessions, prev.engaged_sessions));
+    setDelta(document.getElementById('kpi-key-delta'),      delta(curr.key_events, prev.key_events));
+    setDelta(document.getElementById('kpi-users-delta'),    delta(curr.total_users, prev.total_users));
+  }
+
+  async function renderOrganicTs() {
+    const rows = rowsOf(await fetchData('organicTimeseries'));
+    const currRows = rows.filter(r => r.period === 'current');
+    const prevRows = rows.filter(r => r.period === 'previous').slice(-currRows.length);
+    const labels = currRows.map(r => r.date);
+
+    destroy('sessionsTs');
+    charts.sessionsTs = new Chart(document.getElementById('sessionsTs'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Sessions', data: currRows.map(r => r.sessions), borderColor: C.tealLine, backgroundColor: C.tealFill, fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+          { label: 'Previous', data: prevRows.map(r => r.sessions), borderColor: C.grey, borderDash: [4,4], fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.3 }
+        ]
+      }, options: lineOpts({ legend: true })
+    });
+    destroy('keyEventsTs');
+    charts.keyEventsTs = new Chart(document.getElementById('keyEventsTs'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Key events', data: currRows.map(r => r.key_events), borderColor: C.tealLine, backgroundColor: C.tealFill, fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+          { label: 'Previous', data: prevRows.map(r => r.key_events), borderColor: C.grey, borderDash: [4,4], fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.3 }
+        ]
+      }, options: lineOpts({ legend: true })
+    });
+  }
+
+  async function renderCountry() {
+    const rows = rowsOf(await fetchData('countrySessions')).filter(r => r.country !== '(not set)').slice(0, 20);
+    const max = Math.max(...rows.map(r => r.sessions));
+    document.getElementById('countryList').innerHTML = rows.map(r => `
+      <div class="country-row">
+        <span class="name">${escape(r.country)}</span>
+        <div class="bar-col"><div class="bar" style="width:${(r.sessions/max*100).toFixed(1)}%;"></div></div>
+        <span class="val">${fmt(r.sessions)}</span>
+      </div>`).join('');
+  }
+
+  async function renderDevice() {
+    const rows = rowsOf(await fetchData('deviceBreakdown')).filter(r => r.sessions > 0);
+    donut('deviceDonut', rows.map(r => r.device), rows.map(r => r.sessions),
+      [C.teal, C.gold, C.purple, C.green]);
+  }
+  async function renderBrowser() {
+    const rows = rowsOf(await fetchData('browserBreakdown')).filter(r => r.sessions > 0).slice(0, 6);
+    donut('browserDonut', rows.map(r => r.browser), rows.map(r => r.sessions),
+      [C.teal, C.gold, C.purple, C.green, C.orange, C.red, '#8b94a3']);
+  }
+  async function renderOs() {
+    const rows = rowsOf(await fetchData('osBreakdown')).filter(r => r.sessions > 0).slice(0, 6);
+    donut('osDonut', rows.map(r => r.os), rows.map(r => r.sessions),
+      [C.teal, C.gold, C.purple, C.green, C.orange, C.red]);
+  }
+  async function renderDow() {
+    const rows = rowsOf(await fetchData('dayOfWeekOrganic'));
+    const names = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
+    destroy('dowBar');
+    charts.dowBar = new Chart(document.getElementById('dowBar'), {
+      type: 'bar',
+      data: { labels: rows.map(r => names[r.dow] || r.dow),
+              datasets: [{ data: rows.map(r => r.sessions), backgroundColor: C.tealLine, borderRadius: 4 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => fmt(v) } },
+          y: { grid: { display: false } },
+        }
+      }
+    });
+  }
+
+  async function renderPageEngagement() {
+    const rows = rowsOf(await fetchData('pageEngagement')).slice(0, 25);
+    document.querySelector('#pageEngagementTable tbody').innerHTML = rows.map(r => `
+      <tr>
+        <td class="path">${escape(r.page_path)}</td>
+        <td class="num">${fmt(r.total_sessions)}</td>
+        <td class="num">${fmt(r.total_engaged)}</td>
+        <td class="num">${fmt(r.total_users)}</td>
+        <td class="num">${fmtPct(r.bounce_rate)}</td>
+      </tr>`).join('');
+  }
+
+  // ============== Orchestration ==============
+  async function refreshAll() {
+    document.querySelectorAll('.loading').forEach(el => el.textContent = 'Loading…');
+    try {
+      await Promise.all([
+        renderAeo(),
+        renderAiEngineMix(),
+        renderSourcesTs(),
+        renderTopAiPages(),
+        renderGscStrip(),
+        renderSaveMoney(),
+        renderInvest(),
+        renderAvgPos(),
+        renderOrganicKpis(),
+        renderOrganicTs(),
+        renderCountry(),
+        renderDevice(),
+        renderBrowser(),
+        renderOs(),
+        renderDow(),
+        renderPageEngagement(),
+      ]);
+    } catch (e) { console.error(e); }
+  }
+
+  document.getElementById('applyBtn').addEventListener('click', () => {
+    params.start_date = document.getElementById('startDate').value;
+    params.end_date   = document.getElementById('endDate').value;
+    refreshAll();
+  });
+
+  refreshAll();
+  setInterval(refreshAll, 5 * 60 * 1000);
+</script>
+
+</body>
+</html>

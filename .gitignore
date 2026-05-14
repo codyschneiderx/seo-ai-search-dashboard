@@ -1,0 +1,9 @@
+node_modules/
+package-lock.json
+.DS_Store
+.env
+.env.local
+*.log
+
+# Don't commit a server.js with filled-in tokens
+reference-implementation/server.local.js
